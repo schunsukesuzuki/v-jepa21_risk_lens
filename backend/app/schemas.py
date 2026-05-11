@@ -25,7 +25,7 @@ class DomainInsight(BaseModel):
     title: str
     observations: list[str]
     interpretation: list[str]
-    microbase_angle: list[str]
+    area_intelligence_angle: list[str]
     recommended_next_steps: list[str]
     caveat: str
 

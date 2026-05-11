@@ -243,8 +243,8 @@ function getBilingualDomainText(kind: string, lang: UiLanguage): string[] {
       "この出力は『物体が落ちる』といった物理リスク予測ではなく、『どの時点で都市価値面の見え方が変わったか』を示す urban-state transition detection として見るべきです。",
       "High というスコアは、動画クリップ間の V-JEPA 表現が大きく変化したことを意味します。地理空間デモでは、これは市場・商圏・都市構造の変化点説明へ接続するトリガーになります。",
     ],
-    microbase: [
-      "Microbase 的には、この動画レイヤーを人口動態・空き家確率・地価・駅アクセス・施設到達性などの時系列 Geo Feature を説明するフロントエンドとして使えます。",
+    area_intelligence: [
+      "Area Intelligence 的には、この動画レイヤーを人口動態・空き家確率・地価・駅アクセス・施設到達性などの時系列 Geo Feature を説明するフロントエンドとして使えます。",
       "単なる動画理解ではなく、動画化された地理空間データを EBPM、不動産スクリーニング、自治体計画向けの意思決定支援テキストに変換する点が重要です。",
       "この MVP は、どの区・沿線・商圏が構造的に強いか、どの周辺エリアが弱含みか、どこをメッシュや町丁目レベルで深掘りすべきかを説明する方向に拡張できます。",
       "V-JEPA の embedding delta は変化点検出のトリガーとして使い、意味づけは GeoJSON、メッシュ統計、人口動態、空き家率、施設到達性などの構造化データで補強する構成が自然です。",
@@ -261,7 +261,7 @@ function getBilingualDomainText(kind: string, lang: UiLanguage): string[] {
 }
 
 function getJapaneseDomainTitle(): string {
-  return "Geo / Microbase 解釈：都市価値マップ";
+  return "Geo / Urban Intelligence 解釈：都市価値マップ";
 }
 
 function getJapaneseDomainCaveat(): string {
@@ -287,7 +287,7 @@ function getJapaneseExplanation(result: unknown, backend: string): string {
     : "強い変化点は限定的です";
 
   if (hasDomainInsight(result)) {
-    return `都市価値マップの transition score は ${level}（${score}）です。解析器は連続する動画クリップから V-JEPA 2.1 の表現を抽出し、クリップ間の表現差分が大きい時間窓を、地価・エリア価値マップ上の変化点候補として扱っています。主な変化点は ${eventText} です。この Microbase 向けモードでは、これらの時間窓を物理的な接触リスクではなく、ホットスポットの強調、価値勾配の変化、沿線・交通コリドー効果、周辺部の弱含みといった地理空間上の regime shift を説明するための手がかりとして使います。最終的には、区境界ポリゴン、メッシュ統計、人口動態、空き家確率、駅アクセス、施設到達性などの構造化 GIS データに接続して意味づける構成が自然です。`;
+    return `都市価値マップの transition score は ${level}（${score}）です。解析器は連続する動画クリップから V-JEPA 2.1 の表現を抽出し、クリップ間の表現差分が大きい時間窓を、地価・エリア価値マップ上の変化点候補として扱っています。主な変化点は ${eventText} です。この 地理空間・都市インテリジェンス向けモードでは、これらの時間窓を物理的な接触リスクではなく、ホットスポットの強調、価値勾配の変化、沿線・交通コリドー効果、周辺部の弱含みといった地理空間上の regime shift を説明するための手がかりとして使います。最終的には、区境界ポリゴン、メッシュ統計、人口動態、空き家確率、駅アクセス、施設到達性などの構造化 GIS データに接続して意味づける構成が自然です。`;
   }
 
   return getExplanation(result, backend);
@@ -435,14 +435,14 @@ function DomainInsightCard({ result, language }: { result: unknown; language: Ui
 
   const observations = language === "ja" ? getBilingualDomainText("observations", language) : getStringArray(insight, ["observations"]);
   const interpretation = language === "ja" ? getBilingualDomainText("interpretation", language) : getStringArray(insight, ["interpretation"]);
-  const microbase = language === "ja" ? getBilingualDomainText("microbase", language) : getStringArray(insight, ["microbase_angle", "microbaseAngle"]);
+  const area_intelligence = language === "ja" ? getBilingualDomainText("area_intelligence", language) : getStringArray(insight, ["area_intelligence_angle", "area_intelligenceAngle"]);
   const nextSteps = language === "ja" ? getBilingualDomainText("nextSteps", language) : getStringArray(insight, ["recommended_next_steps", "recommendedNextSteps"]);
   const caveat = language === "ja" ? getJapaneseDomainCaveat() : safeText(firstDefined(insight, ["caveat"]), "");
 
   return (
     <section className="card domain-card">
       <div className="section-header">
-        <h2>{language === "ja" ? getJapaneseDomainTitle() : safeText(firstDefined(insight, ["title"]), "Geo / Microbase interpretation")}</h2>
+        <h2>{language === "ja" ? getJapaneseDomainTitle() : safeText(firstDefined(insight, ["title"]), "Geo / Urban Intelligence interpretation")}</h2>
         <span className="domain-pill">{safeText(firstDefined(insight, ["domain"]), "geo")}</span>
       </div>
 
@@ -462,9 +462,9 @@ function DomainInsightCard({ result, language }: { result: unknown; language: Ui
         </div>
 
         <div>
-          <h3>{language === "ja" ? "Microbase 向けの見せ方" : "Microbase angle"}</h3>
+          <h3>{language === "ja" ? "Area Intelligence 向けの見せ方" : "Area intelligence angle"}</h3>
           <ul className="plain-list">
-            {microbase.map((item, idx) => <li key={idx}>{item}</li>)}
+            {area_intelligence.map((item, idx) => <li key={idx}>{item}</li>)}
           </ul>
         </div>
 
@@ -719,7 +719,7 @@ function App() {
             <select value={domainMode} onChange={(e) => setDomainMode(e.target.value)}>
               <option value="auto">Auto detect</option>
               <option value="geo_urban">Geo / urban value map</option>
-              <option value="microbase">Microbase-style area intelligence</option>
+              <option value="geo_urban">Area intelligence</option>
               <option value="off">Physical-risk only</option>
             </select>
           </label>

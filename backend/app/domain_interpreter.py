@@ -24,7 +24,7 @@ def should_use_geo_urban_layer(filename: str, domain_mode: str) -> bool:
     mode = (domain_mode or "auto").strip().lower()
     if mode in {"off", "none", "default", "physical"}:
         return False
-    if mode in {"geo", "geo_urban", "microbase", "urban", "land_price", "real_estate"}:
+    if mode in {"geo", "geo_urban", "area_intelligence", "urban", "land_price", "real_estate"}:
         return True
 
     # Auto mode: use the domain layer for explicit map / geo / real-estate filenames.
@@ -160,8 +160,8 @@ def build_geo_urban_insight(
         "The high score means the visual representation changed sharply in the sampled clip sequence; in a geospatial demo, that is a cue for hotspot / regime-shift explanation rather than accident risk.",
     ]
 
-    microbase_angle = [
-        "This is directly compatible with a Microbase-style population / vacancy / area-value simulator: the video layer can become a visual front-end for time-series geo features.",
+    area_intelligence_angle = [
+        "This is directly compatible with a population / vacancy / area-value simulator: the video layer can become a visual front-end for time-series geo features.",
         "Land price, population dynamics, vacancy probability, station accessibility, facility reachability, and land-use features can be fused into one explanation layer.",
         "The MVP can answer: which wards or corridors look structurally strong, which peripheral areas show weak value persistence, and which locations require more granular block-level investigation.",
         "The useful product angle is not simply video understanding; it is converting animated geo-spatial evidence into decision-support text for EBPM, real-estate screening, and municipal planning.",
@@ -181,11 +181,11 @@ def build_geo_urban_insight(
     )
 
     return DomainInsight(
-        domain="geo_urban_microbase",
-        title=f"Geo / Microbase interpretation for {area}",
+        domain="geo_urban_area_intelligence",
+        title=f"Geo / Urban Intelligence interpretation for {area}",
         observations=observations,
         interpretation=interpretation,
-        microbase_angle=microbase_angle,
+        area_intelligence_angle=area_intelligence_angle,
         recommended_next_steps=recommended_next_steps,
         caveat=caveat,
     )

@@ -99,7 +99,7 @@ def analyze_video(
             backend=backend,
         )
         diagnostics["domain_mode"] = domain_mode
-        diagnostics["domain_interpreter"] = "geo_urban_microbase"
+        diagnostics["domain_interpreter"] = "geo_urban_area_intelligence"
         diagnostics["domain_patch_version"] = "v12_event_time_safe"
 
         # Replace the physical contact-risk language with a geospatial / urban-value
@@ -156,7 +156,7 @@ def analyze_video(
             f"Urban value-map transition score is {risk_level} ({risk_score:.2f}). "
             "The analyzer compared consecutive V-JEPA clip representations and treated sharp deltas as candidate changes in the animated map's value surface. "
             f"The strongest windows were: {event_summary}. "
-            "For this Microbase-oriented mode, these windows should be read as visual cues for geospatial regime shifts, hotspot emphasis, or corridor effects, "
+            "For this geo/urban-intelligence mode, these windows should be read as visual cues for geospatial regime shifts, hotspot emphasis, or corridor effects, "
             "then grounded with structured GIS layers such as ward polygons, mesh statistics, population dynamics, vacancy probability, station accessibility, and facility reachability."
         )
 
