@@ -294,6 +294,29 @@ function getJapaneseExplanation(result: unknown, backend: string): string {
 }
 
 
+
+function splitExplanationIntoBullets(text: string, language: UiLanguage): string[] {
+  if (!text.trim()) return [];
+
+  if (language === "ja") {
+    return text
+      .replace(/。/g, "。\n")
+      .split(/\n+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+
+  // Split English explanations on sentence boundaries, while avoiding common
+  // decimal-number splits such as "0.83".
+  return text
+    .replace(/(?<!\d)\.\s+(?=[A-Z])/g, ".\n")
+    .replace(/\?\s+(?=[A-Z])/g, "?\n")
+    .replace(/!\s+(?=[A-Z])/g, "!\n")
+    .split(/\n+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 function BackendBlock({ value }: { value: unknown }) {
   return <code className="backend-block">{safeText(value, "not available")}</code>;
 }
@@ -485,10 +508,20 @@ function ExplanationCard({ result, health, language }: { result: unknown; health
   if (!result) return null;
   const backend = getBackendName(result, health);
   const explanation = language === "ja" ? getJapaneseExplanation(result, backend) : getExplanation(result, backend);
+  const explanationBullets = splitExplanationIntoBullets(explanation, language);
+
   return (
     <section className="card explanation-card">
       <h2>{language === "ja" ? "説明" : "Explanation"}</h2>
-      {explanation ? <p className="explanation-text">{explanation}</p> : <p className="muted">No explanation returned.</p>}
+      {explanationBullets.length ? (
+        <ul className="explanation-bullets">
+          {explanationBullets.map((sentence, idx) => (
+            <li key={idx}>{sentence}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted">No explanation returned.</p>
+      )}
       <KV label={language === "ja" ? "使用 backend" : "Backend used"}>
         <BackendBlock value={backend} />
       </KV>

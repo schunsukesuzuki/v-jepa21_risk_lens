@@ -512,3 +512,21 @@ p {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+
+.explanation-bullets {
+  margin: 0 0 18px;
+  padding-left: 22px;
+  display: grid;
+  gap: 10px;
+}
+
+.explanation-bullets li {
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  word-break: auto-phrase;
+}
+
+.explanation-card .kv {
+  margin-top: 16px;
+}
