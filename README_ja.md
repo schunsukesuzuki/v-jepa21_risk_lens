@@ -717,7 +717,7 @@ Explanation mode: Area intelligence
 - object segmentation は未実装
 - legend / label の OCR は未実装
 - pixel を正確な区・駅・mesh cell に georeference していない
-- 地価や空き家 risk に対する直接的な causal inference は未実装
+- ドメイン固有の risk に対する直接的な causal inference は未実装
 - downstream action-anticipation head は未学習
 - hotspot / corridor / peripheral weakening label 用の trained classifier は未実装
 - Geo / Urban Intelligence explanation は、V-JEPA representation change と簡易 visual statistics に基づく rule-based layer
