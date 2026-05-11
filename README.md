@@ -4,6 +4,10 @@
 
 The project is intentionally designed as a **V-JEPA 2.1 representation-change demo**, not as a generic video-captioning system. It uses V-JEPA 2.1 as a frozen video encoder, detects temporal changes in clip embeddings, combines those changes with simple motion features, and turns the result into a human-readable explanation.
 
+This service is designed to analyze videos such as the following:
+
+- [1 Tokyo 23 Wards Land Price Value Map](https://www.youtube.com/watch?v=poJX_WaP_oM)
+
 The current implementation supports two explanation styles:
 
 1. **Physical / operational risk mode**  
