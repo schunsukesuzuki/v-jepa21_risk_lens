@@ -1,0 +1,63 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vjepa-risk-lens-backend
+    environment:
+      - DEVICE=${DEVICE:-cpu}
+      - MODEL_DIR=/models
+      - MODEL_MODE=${MODEL_MODE:-auto}
+      - MODEL_NAME=${MODEL_NAME:-vjepa2_1_vit_base_384}
+      - VJEPA_TORCHSCRIPT_PATH=${VJEPA_TORCHSCRIPT_PATH:-}
+      - VJEPA_CHECKPOINT_PATH=${VJEPA_CHECKPOINT_PATH:-/models/vjepa2_1_vitb_dist_vitG_384.pt}
+      - VJEPA_REPO=${VJEPA_REPO:-facebookresearch/vjepa2}
+      - VJEPA_REPO_DIR=${VJEPA_REPO_DIR:-}
+      - VJEPA_CHECKPOINT_KEY=${VJEPA_CHECKPOINT_KEY:-ema_encoder}
+      - ALLOW_ONLINE_HUB_DOWNLOAD=${ALLOW_ONLINE_HUB_DOWNLOAD:-true}
+      - ALLOW_DEMO_FALLBACK=${ALLOW_DEMO_FALLBACK:-false}
+      - LOAD_MODEL_ON_STARTUP=${LOAD_MODEL_ON_STARTUP:-false}
+      - CLIP_SIZE=${CLIP_SIZE:-8}
+      - SAMPLE_FPS=${SAMPLE_FPS:-4}
+      - FRAME_SIZE=${FRAME_SIZE:-384}
+      - MAX_FRAMES=${MAX_FRAMES:-64}
+      - LLM_PROVIDER=${LLM_PROVIDER:-none}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.1}
+    volumes:
+      - ./models:/models
+      - ./data:/data
+      - ./scripts:/scripts:ro
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health').read()"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: vjepa-risk-lens-frontend
+    depends_on:
+      - backend
+    environment:
+      - BACKEND_PROXY_TARGET=http://backend:8000
+      - VITE_API_BASE_URL=
+    ports:
+      - "5173:5173"
+
+  rust-gateway:
+    profiles: ["gateway"]
+    build:
+      context: ./rust_gateway
+      dockerfile: Dockerfile
+    container_name: vjepa-risk-lens-rust-gateway
+    environment:
+      - BACKEND_URL=http://backend:8000
+    depends_on:
+      - backend
+    ports:
+      - "8080:8080"

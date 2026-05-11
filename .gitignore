@@ -1,0 +1,10 @@
+/backend/app/__pycache__
+backend/.DS_Store
+backend/app/.DS_Store
+/data/previews
+/data/results
+/data/uploads
+frontend/.DS_Store
+/models/.torchhub
+models/vjepa2_1_vitb_dist_vitG_384.pt
+valuemap.mp4
