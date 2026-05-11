@@ -4,6 +4,10 @@
 
 このプロジェクトは、一般的な動画キャプション生成システムではありません。V-JEPA 2.1 を frozen video encoder として使い、動画クリップ間の embedding 変化を検出し、簡易的な motion feature と組み合わせたうえで、人間が読める説明に変換します。
 
+このサービスはたとえば以下のような映像を分析対象として想定しています。
+
+- [1 東京23区 地価バリューマップ](https://www.youtube.com/watch?v=poJX_WaP_oM)
+
 現状の実装では、主に2つの説明モードを扱います。
 
 1. **Physical / operational risk mode**  
