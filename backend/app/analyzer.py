@@ -100,6 +100,65 @@ def analyze_video(
         )
         diagnostics["domain_mode"] = domain_mode
         diagnostics["domain_interpreter"] = "geo_urban_microbase"
+        diagnostics["domain_patch_version"] = "v12_event_time_safe"
+
+        # Replace the physical contact-risk language with a geospatial / urban-value
+        # interpretation. V-JEPA still supplies the representation-change signal,
+        # but the explanation layer should describe map-state transitions, not
+        # falling objects or hand-object contact.
+        current_state = [
+            "The uploaded video is treated as an animated urban value map rather than a physical interaction scene.",
+            "V-JEPA detected representation changes across map frames; these are interpreted as candidate shifts in the visible value surface, hotspots, or corridor patterns.",
+            f"{len(events)} temporal window(s) are salient enough to deserve analyst attention as urban-state transition candidates.",
+        ]
+        predicted_near_future_change = [
+            "The next useful step is not physical accident prediction, but mapping these transition windows to named wards, corridors, station areas, or mesh cells.",
+            "With a GeoJSON or mesh sidecar, the same representation-change trigger can be converted into hotspot emergence, value-gradient shift, or peripheral weakening labels.",
+        ]
+
+        def _event_time(event: object) -> float | None:
+            # DetectedEvent has used both `time` and `time_s` across iterations.
+            # Keep this tolerant so UI/domain layers do not break when schema names change.
+            for attr in ("time", "time_s", "timestamp", "center", "center_s"):
+                value = getattr(event, attr, None)
+                if isinstance(value, (int, float)):
+                    return float(value)
+            if isinstance(event, dict):
+                for key in ("time", "time_s", "timestamp", "center", "center_s"):
+                    value = event.get(key)
+                    if isinstance(value, (int, float)):
+                        return float(value)
+            return None
+
+        def _event_label(event: object) -> str:
+            for attr in ("label", "type", "title", "name"):
+                value = getattr(event, attr, None)
+                if isinstance(value, str) and value:
+                    return value
+            if isinstance(event, dict):
+                for key in ("label", "type", "title", "name"):
+                    value = event.get(key)
+                    if isinstance(value, str) and value:
+                        return value
+            return "transition window"
+
+        event_parts = []
+        for event in events[:4]:
+            t = _event_time(event)
+            label = _event_label(event)
+            if t is None:
+                event_parts.append(label)
+            else:
+                event_parts.append(f"{t:.2f}s: {label}")
+        event_summary = "; ".join(event_parts) if event_parts else "no strong transition window"
+
+        explanation = (
+            f"Urban value-map transition score is {risk_level} ({risk_score:.2f}). "
+            "The analyzer compared consecutive V-JEPA clip representations and treated sharp deltas as candidate changes in the animated map's value surface. "
+            f"The strongest windows were: {event_summary}. "
+            "For this Microbase-oriented mode, these windows should be read as visual cues for geospatial regime shifts, hotspot emphasis, or corridor effects, "
+            "then grounded with structured GIS layers such as ward polygons, mesh statistics, population dynamics, vacancy probability, station accessibility, and facility reachability."
+        )
 
     diagnostics.update(
         {

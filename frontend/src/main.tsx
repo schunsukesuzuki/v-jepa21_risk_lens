@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "./styles.css";
 
 type AnyRecord = Record<string, any>;
+type UiLanguage = "en" | "ja";
 
 const API_HEALTH = "/api/health";
 const API_ANALYZE = "/api/analyze";
@@ -153,8 +154,24 @@ function getBackendName(result: unknown, health?: unknown): string {
   return safeText(raw, "not available");
 }
 
+function hasDomainInsight(result: unknown): boolean {
+  return getDomainInsight(result) !== null;
+}
+
 function getRiskLabel(result: unknown): string {
   return safeText(firstDefined(result, ["risk", "risk_level", "level", "summary.risk", "summary.risk_level"]), "not available");
+}
+
+function getScoreLabel(result: unknown): string {
+  return hasDomainInsight(result) ? "Transition score" : "Max score";
+}
+
+function getRiskCardTitle(result: unknown): string {
+  return hasDomainInsight(result) ? "Urban transition signal" : "Risk";
+}
+
+function getLevelLabel(result: unknown): string {
+  return hasDomainInsight(result) ? "Signal level" : "Level";
 }
 
 function getMaxScore(result: unknown): string {
@@ -210,6 +227,73 @@ function getExplanation(result: unknown, backend?: string): string {
   return text.replace(/\s{2,}/g, " ").trim();
 }
 
+
+function getBilingualDomainText(kind: string, lang: UiLanguage): string[] {
+  if (lang === "en") return [];
+
+  const ja: Record<string, string[]> = {
+    observations: [
+      "この動画は、物理的な作業・接触シーンではなく、都市空間における地価・エリア価値マップのアニメーションとして解釈します。",
+      "画面構造は、色分けされた空間的な価値分布の上に、行政区・交通網・地名などの情報が重ねられた地図型の可視化です。",
+      "V-JEPA 2.1 が検出した表現変化の強い時間窓は、物体衝突リスクではなく、地価・都市価値面の変化点候補として扱います。",
+      "暖色・寒色の分布やその時間変化は、価値の高低、ホットスポット、交通軸・商圏・周辺部の差分を読むための視覚的手がかりになります。",
+    ],
+    interpretation: [
+      "地価・エリア価値マップでは、表現変化の強い区間を、空間的な価値勾配、ホットスポット、交通コリドー効果が目立つタイミングとして扱えます。",
+      "この出力は『物体が落ちる』といった物理リスク予測ではなく、『どの時点で都市価値面の見え方が変わったか』を示す urban-state transition detection として見るべきです。",
+      "High というスコアは、動画クリップ間の V-JEPA 表現が大きく変化したことを意味します。地理空間デモでは、これは市場・商圏・都市構造の変化点説明へ接続するトリガーになります。",
+    ],
+    microbase: [
+      "Microbase 的には、この動画レイヤーを人口動態・空き家確率・地価・駅アクセス・施設到達性などの時系列 Geo Feature を説明するフロントエンドとして使えます。",
+      "単なる動画理解ではなく、動画化された地理空間データを EBPM、不動産スクリーニング、自治体計画向けの意思決定支援テキストに変換する点が重要です。",
+      "この MVP は、どの区・沿線・商圏が構造的に強いか、どの周辺エリアが弱含みか、どこをメッシュや町丁目レベルで深掘りすべきかを説明する方向に拡張できます。",
+      "V-JEPA の embedding delta は変化点検出のトリガーとして使い、意味づけは GeoJSON、メッシュ統計、人口動態、空き家率、施設到達性などの構造化データで補強する構成が自然です。",
+    ],
+    nextSteps: [
+      "動画に年次、凡例、単位、データ出典、対象地域などの metadata sidecar を付与します。",
+      "GeoJSON、メッシュ、区境界ポリゴンを接続し、検出された変化点を具体的な地名・区・沿線・商圏に対応付けます。",
+      "汎用的な risk label ではなく、hotspot emergence、value-gradient shift、corridor effect、peripheral weakening などの都市ドメインラベルへ置き換えます。",
+      "V-JEPA の表現変化を検出トリガーにし、その後段で構造化 GIS データに基づいて社会経済的な意味を説明する設計にします。",
+    ],
+  };
+
+  return ja[kind] ?? [];
+}
+
+function getJapaneseDomainTitle(): string {
+  return "Geo / Microbase 解釈：都市価値マップ";
+}
+
+function getJapaneseDomainCaveat(): string {
+  return "このドメイン解釈は、動画上の視覚的な表現変化とファイル名・モード指定に基づくものです。現時点では凡例の OCR や、ピクセル単位での区・町丁目へのジオリファレンスは行っていません。本番では、動画を GeoJSON、メッシュ統計、地価・人口・空き家・施設到達性などの元データに接続する必要があります。";
+}
+
+function getJapaneseExplanation(result: unknown, backend: string): string {
+  const score = getMaxScore(result);
+  const level = getRiskLabel(result);
+  const events = getEvents(result).slice(0, 4);
+  const eventText = events.length
+    ? events.map((event) => {
+        const t = firstDefined(event, ["time", "time_s", "timestamp", "timestamp_s", "center", "center_s"]);
+        const label = safeText(firstDefined(event, ["label", "type", "title", "name"]), "変化点候補");
+        const timeText = asNumber(t) !== undefined ? `${asNumber(t)!.toFixed(2)}s` : "時刻不明";
+        const jpLabel = label.includes("risk")
+          ? "強い都市価値面の変化"
+          : label.includes("state")
+            ? "都市状態の変化点候補"
+            : label;
+        return `${timeText}: ${jpLabel}`;
+      }).join("；")
+    : "強い変化点は限定的です";
+
+  if (hasDomainInsight(result)) {
+    return `都市価値マップの transition score は ${level}（${score}）です。解析器は連続する動画クリップから V-JEPA 2.1 の表現を抽出し、クリップ間の表現差分が大きい時間窓を、地価・エリア価値マップ上の変化点候補として扱っています。主な変化点は ${eventText} です。この Microbase 向けモードでは、これらの時間窓を物理的な接触リスクではなく、ホットスポットの強調、価値勾配の変化、沿線・交通コリドー効果、周辺部の弱含みといった地理空間上の regime shift を説明するための手がかりとして使います。最終的には、区境界ポリゴン、メッシュ統計、人口動態、空き家確率、駅アクセス、施設到達性などの構造化 GIS データに接続して意味づける構成が自然です。`;
+  }
+
+  return getExplanation(result, backend);
+}
+
+
 function BackendBlock({ value }: { value: unknown }) {
   return <code className="backend-block">{safeText(value, "not available")}</code>;
 }
@@ -254,12 +338,12 @@ function RiskCard({ result, health }: { result: unknown; health: unknown }) {
   const backend = getBackendName(result, health);
   return (
     <section className="card">
-      <h2>Risk</h2>
+      <h2>{getRiskCardTitle(result)}</h2>
       <div className="risk-grid">
-        <KV label="Level">
+        <KV label={getLevelLabel(result)}>
           <span className="risk-level">{getRiskLabel(result)}</span>
         </KV>
-        <KV label="Max score">
+        <KV label={getScoreLabel(result)}>
           <span className="score">{getMaxScore(result)}</span>
         </KV>
         <KV label="Backend">
@@ -280,7 +364,7 @@ function Timeline({ result }: { result: unknown }) {
   return (
     <section className="card">
       <div className="section-header">
-        <h2>Timeline</h2>
+        <h2>{hasDomainInsight(result) ? "Map-transition timeline" : "Timeline"}</h2>
         <span className="muted">scroll horizontally</span>
       </div>
       <div className="timeline-scroll" tabIndex={0}>
@@ -345,67 +429,67 @@ function EventsCard({ result }: { result: unknown }) {
 }
 
 
-function DomainInsightCard({ result }: { result: unknown }) {
+function DomainInsightCard({ result, language }: { result: unknown; language: UiLanguage }) {
   const insight = getDomainInsight(result);
   if (!insight) return null;
 
-  const observations = getStringArray(insight, ["observations"]);
-  const interpretation = getStringArray(insight, ["interpretation"]);
-  const microbase = getStringArray(insight, ["microbase_angle", "microbaseAngle"]);
-  const nextSteps = getStringArray(insight, ["recommended_next_steps", "recommendedNextSteps"]);
-  const caveat = safeText(firstDefined(insight, ["caveat"]), "");
+  const observations = language === "ja" ? getBilingualDomainText("observations", language) : getStringArray(insight, ["observations"]);
+  const interpretation = language === "ja" ? getBilingualDomainText("interpretation", language) : getStringArray(insight, ["interpretation"]);
+  const microbase = language === "ja" ? getBilingualDomainText("microbase", language) : getStringArray(insight, ["microbase_angle", "microbaseAngle"]);
+  const nextSteps = language === "ja" ? getBilingualDomainText("nextSteps", language) : getStringArray(insight, ["recommended_next_steps", "recommendedNextSteps"]);
+  const caveat = language === "ja" ? getJapaneseDomainCaveat() : safeText(firstDefined(insight, ["caveat"]), "");
 
   return (
     <section className="card domain-card">
       <div className="section-header">
-        <h2>{safeText(firstDefined(insight, ["title"]), "Geo / Microbase interpretation")}</h2>
+        <h2>{language === "ja" ? getJapaneseDomainTitle() : safeText(firstDefined(insight, ["title"]), "Geo / Microbase interpretation")}</h2>
         <span className="domain-pill">{safeText(firstDefined(insight, ["domain"]), "geo")}</span>
       </div>
 
       <div className="domain-grid">
         <div>
-          <h3>Video-specific observations</h3>
+          <h3>{language === "ja" ? "動画から読めること" : "Video-specific observations"}</h3>
           <ul className="plain-list">
             {observations.map((item, idx) => <li key={idx}>{item}</li>)}
           </ul>
         </div>
 
         <div>
-          <h3>Urban interpretation</h3>
+          <h3>{language === "ja" ? "都市・地価マップとしての解釈" : "Urban interpretation"}</h3>
           <ul className="plain-list">
             {interpretation.map((item, idx) => <li key={idx}>{item}</li>)}
           </ul>
         </div>
 
         <div>
-          <h3>Microbase angle</h3>
+          <h3>{language === "ja" ? "Microbase 向けの見せ方" : "Microbase angle"}</h3>
           <ul className="plain-list">
             {microbase.map((item, idx) => <li key={idx}>{item}</li>)}
           </ul>
         </div>
 
         <div>
-          <h3>Next implementation steps</h3>
+          <h3>{language === "ja" ? "次の実装ステップ" : "Next implementation steps"}</h3>
           <ul className="plain-list">
             {nextSteps.map((item, idx) => <li key={idx}>{item}</li>)}
           </ul>
         </div>
       </div>
 
-      {caveat && <p className="caveat"><strong>Caveat:</strong> {caveat}</p>}
+      {caveat && <p className="caveat"><strong>{language === "ja" ? "注意:" : "Caveat:"}</strong> {caveat}</p>}
     </section>
   );
 }
 
-function ExplanationCard({ result, health }: { result: unknown; health: unknown }) {
+function ExplanationCard({ result, health, language }: { result: unknown; health: unknown; language: UiLanguage }) {
   if (!result) return null;
   const backend = getBackendName(result, health);
-  const explanation = getExplanation(result, backend);
+  const explanation = language === "ja" ? getJapaneseExplanation(result, backend) : getExplanation(result, backend);
   return (
     <section className="card explanation-card">
-      <h2>Explanation</h2>
+      <h2>{language === "ja" ? "説明" : "Explanation"}</h2>
       {explanation ? <p className="explanation-text">{explanation}</p> : <p className="muted">No explanation returned.</p>}
-      <KV label="Backend used">
+      <KV label={language === "ja" ? "使用 backend" : "Backend used"}>
         <BackendBlock value={backend} />
       </KV>
     </section>
@@ -461,6 +545,7 @@ function App() {
   const [file, setFile] = useState<File | null>(null);
   const [demoMode, setDemoMode] = useState(false);
   const [domainMode, setDomainMode] = useState("auto");
+  const [language, setLanguage] = useState<UiLanguage>("en");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<unknown>(null);
   const [error, setError] = useState<string>("");
@@ -628,15 +713,25 @@ function App() {
           <span>Use explicit classical demo mode if no V-JEPA model is mounted</span>
         </label>
 
-        <label className="field-row">
-          <span>Explanation mode</span>
-          <select value={domainMode} onChange={(e) => setDomainMode(e.target.value)}>
-            <option value="auto">Auto detect</option>
-            <option value="geo_urban">Geo / urban value map</option>
-            <option value="microbase">Microbase-style area intelligence</option>
-            <option value="off">Physical-risk only</option>
-          </select>
-        </label>
+        <div className="field-grid">
+          <label className="field-row">
+            <span>Explanation mode</span>
+            <select value={domainMode} onChange={(e) => setDomainMode(e.target.value)}>
+              <option value="auto">Auto detect</option>
+              <option value="geo_urban">Geo / urban value map</option>
+              <option value="microbase">Microbase-style area intelligence</option>
+              <option value="off">Physical-risk only</option>
+            </select>
+          </label>
+
+          <label className="field-row">
+            <span>Language</span>
+            <select value={language} onChange={(e) => setLanguage(e.target.value as UiLanguage)}>
+              <option value="en">English</option>
+              <option value="ja">日本語</option>
+            </select>
+          </label>
+        </div>
 
         <button className="analyze-button" onClick={analyze} disabled={busy || !file} type="button">
           {busy ? "Analyzing..." : "Analyze"}
@@ -646,11 +741,11 @@ function App() {
 
       <RiskCard result={result} health={health} />
       <Timeline result={result} />
-      <DomainInsightCard result={result} />
+      <DomainInsightCard result={result} language={language} />
       <TextListCard title="Current state" items={currentState} />
       <TextListCard title="Predicted near-future change" items={prediction} />
       <EventsCard result={result} />
-      <ExplanationCard result={result} health={health} />
+      <ExplanationCard result={result} health={health} language={language} />
       <Diagnostics result={result} />
     </main>
   );
