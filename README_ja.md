@@ -1,5 +1,7 @@
 # V-JEPA Video Risk Lens
 
+Note: no supervised probe implemented
+
 `V-JEPA Video Risk Lens` は、**動画の表現変化を検出し、状況・リスク・都市空間上の変化点を説明するための Docker 化 MVP** です。
 
 このプロジェクトは、一般的な動画キャプション生成システムではありません。V-JEPA 2.1 を frozen video encoder として使い、動画クリップ間の embedding 変化を検出し、簡易的な motion feature と組み合わせたうえで、人間が読める説明に変換します。

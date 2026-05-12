@@ -8,3 +8,6 @@ frontend/.DS_Store
 /models/.torchhub
 models/vjepa2_1_vitb_dist_vitG_384.pt
 valuemap.mp4
+rust_gateway/.DS_Store
+.DS_Store
+.DS_Store

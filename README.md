@@ -1,5 +1,7 @@
 # V-JEPA Video Risk Lens
 
+Note: no supervised probe implemented
+
 `V-JEPA Video Risk Lens` is a Dockerized MVP for a **video representation-change analyzer**.
 
 The project is intentionally designed as a **V-JEPA 2.1 representation-change demo**, not as a generic video-captioning system. It uses V-JEPA 2.1 as a frozen video encoder, detects temporal changes in clip embeddings, combines those changes with simple motion features, and turns the result into a human-readable explanation.
