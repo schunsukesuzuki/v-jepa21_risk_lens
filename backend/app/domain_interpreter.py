@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -10,6 +9,16 @@ import numpy as np
 from .schemas import DomainInsight
 
 
+# GeoVisualStats is a lightweight data container for visual statistics extracted
+# from RGB video frames in a geo / urban intelligence context.
+#
+# The fields summarize how much of the valid image area is represented by warm
+# or cool heatmap-like colors, how map-like the frame appears, how much the color
+# distribution changes over time, and where the warm-color region is centered.
+#
+# These values are later used to convert generic video state-change outputs into
+# a domain-specific interpretation for land-price maps, area-value maps, urban
+# simulations, or other geo-spatial visualizations.
 @dataclass
 class GeoVisualStats:
     warm_color_ratio: float
@@ -20,6 +29,19 @@ class GeoVisualStats:
     center_of_warmth_y: float
 
 
+# Decide whether the geo / urban interpretation layer should be enabled.
+#
+# The function first normalizes domain_mode. Explicit disabling values such as
+# "off", "none", "default", or "physical" return False, meaning that the video
+# should be interpreted as a normal physical-scene / risk-analysis video.
+#
+# Explicit geo-related modes such as "geo", "geo_urban", "area_intelligence",
+# "urban", "land_price", or "real_estate" return True.
+#
+# In auto mode, the function falls back to filename-based detection. If the file
+# name contains map, real-estate, land-price, population, vacancy, Tokyo-related,
+# or area-value keywords, the function assumes that the video is a geo-spatial or
+# urban intelligence visualization and enables the domain layer.
 def should_use_geo_urban_layer(filename: str, domain_mode: str) -> bool:
     mode = (domain_mode or "auto").strip().lower()
     if mode in {"off", "none", "default", "physical"}:
@@ -47,6 +69,36 @@ def should_use_geo_urban_layer(filename: str, domain_mode: str) -> bool:
     return any(k in name for k in keywords)
 
 
+# Compute visual statistics from RGB video frames for geo / urban interpretation.
+#
+# This function is the core visual-statistics routine in this module. It does not
+# perform semantic GIS analysis. Instead, it extracts cheap and robust visual
+# signals that are useful for identifying heatmap-like or choropleth-like map
+# animations.
+#
+# Processing steps:
+# 1. If no frames are available, return a safe default with zero scores and a
+#    centered warm-color location.
+# 2. Sample up to roughly twelve frames to keep the computation cheap and stable.
+# 3. Resize each sampled frame and convert it from RGB to HSV, because hue and
+#    saturation make it easier to classify warm and cool colors.
+# 4. Exclude dark or low-saturation pixels so that black backgrounds, labels, and
+#    text-heavy regions do not dominate the statistics.
+# 5. Estimate warm-color and cool-color ratios using hue ranges that roughly
+#    correspond to red / orange / yellow and cyan / blue.
+# 6. Estimate the normalized center of warm-color regions, which can act as a
+#    crude proxy for where high-value or hotspot-like areas appear in the frame.
+# 7. Build HSV histograms across sampled frames and compute the average frame-to-
+#    frame histogram distance. This approximates temporal changes in the visual
+#    value surface of an animated map.
+# 8. Use Canny edge density on the first sampled frame as a proxy for map-like
+#    linework such as administrative boundaries, roads, railways, labels, and
+#    other dense geographic features.
+# 9. Combine edge density and colored-area coverage into a map_like_score.
+#
+# The returned GeoVisualStats object is later used by build_geo_urban_insight()
+# to explain detected state-change windows as urban-state or map-value
+# transitions rather than physical collision or accident risks.
 def compute_geo_visual_stats(frames_rgb: np.ndarray) -> GeoVisualStats:
     if len(frames_rgb) == 0:
         return GeoVisualStats(0, 0, 0, 0, 0.5, 0.5)
@@ -118,6 +170,43 @@ def compute_geo_visual_stats(frames_rgb: np.ndarray) -> GeoVisualStats:
     )
 
 
+# Build a structured DomainInsight for a geo / urban intelligence video.
+#
+# This function converts generic video-analysis outputs into a domain-specific
+# interpretation suitable for animated land-price maps, area-value maps, urban
+# simulations, population / vacancy maps, or other geo-spatial visual layers.
+#
+# The function first computes visual statistics with compute_geo_visual_stats().
+# It then uses filename hints to infer the target area and layer type. For
+# example, filenames containing "東京23区" or "23区" are interpreted as Tokyo
+# 23 wards, while filenames containing "地価", "land price", or "value" are
+# treated as land-price / area-value maps.
+#
+# The generated observations explain what the video appears to show and how many
+# temporal state-change windows were detected. Importantly, these events are not
+# interpreted as physical collision risks. In this domain layer, they are
+# reframed as map-value transition points or urban-state changes.
+#
+# The interpretation section explains how representation-change windows can be
+# used as candidates for hotspot emergence, value-gradient shifts, corridor
+# effects, or peripheral weakening.
+#
+# The area_intelligence_angle section describes the product / business direction:
+# combining land price, population dynamics, vacancy probability, station
+# accessibility, facility reachability, and land-use features into a unified
+# decision-support explanation layer for EBPM, real-estate screening, and
+# municipal planning.
+#
+# The recommended_next_steps section describes how to move beyond this MVP:
+# adding metadata sidecars, connecting GeoJSON / mesh / ward polygon layers,
+# replacing generic risk labels with domain labels, and using V-JEPA embedding
+# deltas as triggers while relying on structured GIS data for socioeconomic
+# explanation.
+#
+# The caveat explicitly states the current limitations: the function uses visual
+# representation changes and filename hints, but it does not yet OCR legends,
+# map pixels to exact administrative areas, or connect to authoritative GIS
+# source tables.
 def build_geo_urban_insight(
     *,
     filename: str,
